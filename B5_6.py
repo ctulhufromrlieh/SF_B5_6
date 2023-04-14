@@ -1,3 +1,6 @@
+import random
+import time
+
 # consts
 size_x = 3
 size_y = 3
@@ -7,8 +10,9 @@ win_count = min_size
 is_show_coord_line = min_size < 10
 turn_delimiter_line_len = 20
 
-# is_multiplayer = True
-# computer_player_index = 1
+is_multiplayer = True
+human_player_index = 0
+computer_delay = 1
 
 
 # convert funcs
@@ -24,16 +28,27 @@ def convert_field_value_to_symbol(field_value):
 
 
 def convert_player_index_to_name(a_player_index):
-    return f"Player {a_player_index + 1}"
+    if is_multiplayer:
+        return f"Player {a_player_index + 1}"
+    else:
+        if a_player_index == human_player_index:
+            return "Player"
+        else:
+            return "Computer"
 
 
 def convert_end_index_to_name(a_end_index):
     if a_end_index == -1:
         return "Game is over! No one is win!"
-    elif a_end_index == 1:
-        return "Congratulations! Player #1 won!"
-    elif a_end_index == 2:
-        return "Congratulations! Player #2 won!"
+    elif a_end_index in [1, 2]:
+        a_player_index = a_end_index - 1
+        winner_name = convert_player_index_to_name(a_player_index)
+        if is_multiplayer:
+            return f"Congratulations! {winner_name} won!"
+        elif a_player_index == human_player_index:
+            return f"Congratulations! You win!"
+        else:
+            return f"Game is over! {winner_name} won"
     else:
         raise Exception("convert_end_index_to_name: wrong a_end_index")
 
@@ -59,7 +74,7 @@ def show_field(a_data):
 def show_turn(a_turn_index, a_player_index, a_data):
     print("=" * turn_delimiter_line_len)
     print(f"Round number #{a_turn_index + 1}.")
-    print(f"Player {a_player_index + 1} turn:")
+    print(f"{convert_player_index_to_name(a_player_index)} turn:")
     print("=" * turn_delimiter_line_len)
 
     show_field(a_data)
@@ -147,15 +162,48 @@ def get_end_index(a_data):
     return 0
 
 
+def get_coordinates_by_index(a_data, a_index):
+    if a_index >= avail_turn_count:
+        raise Exception("get_coordinates_by_index: a_index")
+
+    a_curr_index = 0
+    for a_row_index in range(0, len(a_data)):
+        for a_col_index in range(0, len(a_data[a_row_index])):
+            if not a_data[a_row_index][a_col_index]:
+                if a_curr_index == a_index:
+                    return a_col_index, a_row_index
+                else:
+                    a_curr_index += 1
+
+    raise Exception("get_coordinates_by_index: wrong a_data, a_index")
+
+def computer_turn_random(a_player_index, a_data):
+    a_index = random.randint(0, avail_turn_count - 1)
+    time.sleep(computer_delay)
+    return get_coordinates_by_index(a_data, a_index)
+
+
 turn_index = 0
 player_index = 0
 data = create_field()
 avail_turn_count = size_x * size_y
+computer_turn = computer_turn_random
+
+is_multiplayer = False
+
+player_funcs = [read_coordinates, read_coordinates]
+if is_multiplayer:
+    player_funcs = [read_coordinates, read_coordinates]
+else:
+    player_funcs = [computer_turn, computer_turn]
+    player_funcs[human_player_index] = read_coordinates
 
 while True:
     show_turn(turn_index, player_index, data)
 
-    coordinates = read_coordinates(player_index, data)
+    # coordinates = read_coordinates(player_index, data)
+    coordinates = player_funcs[player_index](player_index, data)
+    # Player input is Exit
     if coordinates is None:
         print("Exiting application...")
         exit(0)
@@ -164,14 +212,6 @@ while True:
     ix = coordinates[0]
     data[iy][ix] = player_index + 1
     avail_turn_count -= 1
-
-    # data = [[1, 1, 1],
-    #         [0, 0, 0],
-    #         [0, 0, 0]]
-    # data = [[2, 2, 2],
-    #         [0, 0, 0],
-    #         [0, 0, 0]]
-    # avail_turn_count = 0
 
     curr_end_index = get_end_index(data)
     if curr_end_index:
