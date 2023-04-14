@@ -10,15 +10,16 @@ win_count = min_size
 is_show_coord_line = min_size < 10
 turn_delimiter_line_len = 20
 
-is_multiplayer = True
-human_player_index = 0
+# is_multiplayer = True
+human_player_index = 1
 computer_delay = 1
 
 
 # convert funcs
 def convert_field_value_to_symbol(field_value):
     if field_value == 0:
-        return " "
+        # return " "
+        return "·"
     elif field_value == 1:
         return "X"
     elif field_value == 2:
@@ -55,6 +56,8 @@ def convert_end_index_to_name(a_end_index):
 
 # show funcs
 def show_field(a_data):
+    print()
+    print("Field state:")
     if is_show_coord_line:
         coord_names = map(str, range(1, size_x + 1))
         coord_line = 2 * " " + "".join(coord_names)
@@ -70,14 +73,20 @@ def show_field(a_data):
         print(row_line)
         row_index += 1
 
+    print()
 
-def show_turn(a_turn_index, a_player_index, a_data):
+
+def show_turn_title(a_turn_index, a_player_index):
+    # print()
     print("=" * turn_delimiter_line_len)
     print(f"Round number #{a_turn_index + 1}.")
-    print(f"{convert_player_index_to_name(a_player_index)} turn:")
-    print("=" * turn_delimiter_line_len)
+    print(f"{convert_player_index_to_name(a_player_index)} turn.")
+    # print("=" * turn_delimiter_line_len)
 
-    show_field(a_data)
+
+def show_turn(a_coordinates):
+    # print(f"X = {a_coordinates[0] + 1} | Y = {a_coordinates[1] + 1}")
+    print(f"(X;Y) = ({a_coordinates[0] + 1}; {a_coordinates[1] + 1})")
 
 
 # read funcs
@@ -88,10 +97,11 @@ def str_to_int(s):
         return None
 
 
+# return value - coordinates if all OK, None if user quit
 def read_coordinates(a_player_index, a_data):
     global avail_turn_count
     while True:
-        coord_s = input(f"Your turn, {convert_player_index_to_name(a_player_index)}: ")
+        coord_s = input(f"Enter coordinates, {convert_player_index_to_name(a_player_index)}: ")
         if coord_s.lower() in ['exit', 'quit']:
             return None
 
@@ -125,38 +135,66 @@ def create_field():
     return a_data
 
 
+def matrix_has_count_value(a_data, a_value, a_req_count):
+    # horizontal
+    for a_row_index in range(size_y):
+        a_count = 0
+        for a_col_index in range(size_x):
+            if a_data[a_row_index][a_col_index] == a_value:
+                a_count += 1
+
+        if a_count >= a_req_count:
+            return True
+
+    # vertical
+    for a_col_index in range(size_x):
+        a_count = 0
+        for a_row_index in range(size_y):
+            if a_data[a_row_index][a_col_index] == a_value:
+                a_count += 1
+
+        if a_count >= a_req_count:
+            return True
+
+    # diagonal 1
+    for a_offset_y in range(size_y - min_size + 1):
+        for a_offset_x in range(size_x - min_size + 1):
+            a_count = 0
+            for a_diag_index in range(min_size):
+                if a_data[a_offset_y + a_diag_index][a_offset_x + a_diag_index] == a_value:
+                    a_count += 1
+
+            if a_count >= a_req_count:
+                return True
+
+    # diagonal 2
+    for a_offset_y in range(size_y - min_size + 1):
+        for a_offset_x in range(size_x - min_size + 1):
+            a_count = 0
+            for a_diag_index in range(min_size):
+                if a_data[a_offset_y + a_diag_index][a_offset_x + min_size - 1 - a_diag_index] == a_value:
+                    a_count += 1
+
+            if a_count >= a_req_count:
+                return True
+
+    # no one line found
+    return False
+
+
+# return values:
+#    0: game continue
+#   -1: no one win
+#    1: player with index 0 wins
+#    2: player with index 1 wins
 def get_end_index(a_data):
+    for curr_player_index in range(0, 2):
+        if matrix_has_count_value(a_data, 1 + curr_player_index, win_count):
+            return 1 + player_index
+
     # no available turns
     if not avail_turn_count:
         return -1
-
-    for curr_player_index in range(0, 2):
-        # row check
-        for row in a_data:
-            if row.count(curr_player_index + 1) == win_count:
-                return curr_player_index + 1
-        # col check
-        for col_index in range(0, size_x):
-            count = 0
-            for row_index in range(0, size_y):
-                if a_data[row_index][col_index] == curr_player_index + 1:
-                    count += 1
-            if count == win_count:
-                return curr_player_index + 1
-        # diagonal check #1
-        count = 0
-        for i in range(0, min_size):
-            if a_data[i][i] == curr_player_index + 1:
-                count += 1
-        if count == win_count:
-            return curr_player_index + 1
-        # diagonal check #2
-        count = 0
-        for i in range(0, min_size):
-            if a_data[min_size - 1 - i][i] == curr_player_index + 1:
-                count += 1
-        if count == win_count:
-            return curr_player_index + 1
 
     # no end yet
     return 0
@@ -177,6 +215,7 @@ def get_coordinates_by_index(a_data, a_index):
 
     raise Exception("get_coordinates_by_index: wrong a_data, a_index")
 
+
 def computer_turn_random(a_player_index, a_data):
     a_index = random.randint(0, avail_turn_count - 1)
     time.sleep(computer_delay)
@@ -191,32 +230,33 @@ computer_turn = computer_turn_random
 
 is_multiplayer = False
 
-player_funcs = [read_coordinates, read_coordinates]
 if is_multiplayer:
     player_funcs = [read_coordinates, read_coordinates]
 else:
     player_funcs = [computer_turn, computer_turn]
     player_funcs[human_player_index] = read_coordinates
 
+show_field(data)
 while True:
-    show_turn(turn_index, player_index, data)
+    show_turn_title(turn_index, player_index)
 
-    # coordinates = read_coordinates(player_index, data)
     coordinates = player_funcs[player_index](player_index, data)
-    # Player input is Exit
+    # if Player input is Exit
     if coordinates is None:
         print("Exiting application...")
         exit(0)
+    show_turn(coordinates)
 
     iy = coordinates[1]
     ix = coordinates[0]
     data[iy][ix] = player_index + 1
     avail_turn_count -= 1
 
+    show_field(data)
+
     curr_end_index = get_end_index(data)
     if curr_end_index:
         print(convert_end_index_to_name(curr_end_index))
-        show_field(data)
         break
 
     if player_index == 0:
@@ -226,5 +266,3 @@ while True:
         turn_index += 1
     else:
         raise Exception("main: Wrong curr_player_index")
-
-    print()
