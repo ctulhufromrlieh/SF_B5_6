@@ -10,8 +10,6 @@ win_count = min_size
 is_show_coord_line = min_size < 10
 turn_delimiter_line_len = 20
 
-# is_multiplayer = True
-human_player_index = 1
 computer_delay = 1
 
 
@@ -76,19 +74,44 @@ def show_field(a_field):
 
 
 def show_turn_title(a_turn_index, a_player_index):
-    # print()
     print("=" * turn_delimiter_line_len)
     print(f"Round number #{a_turn_index + 1}.")
     print(f"{convert_player_index_to_name(a_player_index)} turn.")
-    # print("=" * turn_delimiter_line_len)
 
 
 def show_turn(a_coordinates):
-    # print(f"X = {a_coordinates[0] + 1} | Y = {a_coordinates[1] + 1}")
     print(f"(X;Y) = ({a_coordinates[0] + 1}; {a_coordinates[1] + 1})")
 
 
 # read funcs
+def read_variant(a_msg_text, a_variants, a_def_index=None):
+    def fix_index(a_index, a_default):
+        if a_index is None:
+            return a_default
+        elif 0 <= a_index < len(a_variants):
+            return a_index
+        else:
+            return a_default
+
+    if a_def_index is None:
+        a_def_index = len(a_variants) - 1
+
+    print(a_msg_text)
+    for a_var_index in range(len(a_variants)):
+        print(f"{a_var_index + 1}: {a_variants[a_var_index]}")
+
+    a_var_index = str_to_int(input("Your choice: "))
+    if a_var_index is not None:
+        a_var_index -= 1
+
+    a_fixed_def_index = fix_index(a_def_index, len(a_variants) - 1)
+    a_fixed_var_index = fix_index(a_var_index, a_fixed_def_index)
+
+    print(f"You choose {a_variants[a_fixed_var_index]}")
+
+    return a_fixed_var_index
+
+
 def str_to_int(a_string_value):
     try:
         return int(a_string_value)
@@ -238,13 +261,25 @@ if __name__ == "__main__":
             "win_count": win_count,
             "avail_turn_count":  size_x * size_y}
     data["field"] = create_field(data["size_x"], data["size_y"])
-    # data = create_field()
-    # data[""]
-    # avail_turn_count = size_x * size_y
+
+    # select computer strategy
     computer_turn = computer_turn_random
 
-    # is_multiplayer = False
-    is_multiplayer = True
+    human_player_index = 0    # default value for safety and compiler's happiness
+    var_game_mode = read_variant("Choose game mode:", ["Single player game", "Multiplayer game"], 1)
+    if var_game_mode == 0:
+        is_multiplayer = False
+        var_side = read_variant("Choose your side:", ["Xs", "Os"], 0)
+        if var_side == 0:
+            human_player_index = 0
+        elif var_side == 1:
+            human_player_index = 1
+        else:
+            raise Exception("main: wrong var_side")
+    elif var_game_mode == 1:
+        is_multiplayer = True
+    else:
+        raise Exception("main: wrong var_game_mode")
 
     if is_multiplayer:
         player_funcs = [read_coordinates, read_coordinates]
@@ -257,7 +292,7 @@ if __name__ == "__main__":
         show_turn_title(turn_index, player_index)
 
         coordinates = player_funcs[player_index](data, player_index)
-        # if Player input is Exit
+        # if Player wants to Exit
         if coordinates is None:
             print("Exiting application...")
             exit(0)
