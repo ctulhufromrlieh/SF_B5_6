@@ -123,7 +123,7 @@ def str_to_int(a_string_value):
 def read_coordinates(a_data, a_player_index):
     # global avail_turn_count
     while True:
-        coord_s = input(f"Enter coordinates, {convert_player_index_to_name(a_player_index)}: ")
+        coord_s = input(f"Enter coordinates (format <X Y>), {convert_player_index_to_name(a_player_index)}: ")
         if coord_s.lower() in ['exit', 'quit']:
             return None
 
